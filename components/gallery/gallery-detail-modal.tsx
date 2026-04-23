@@ -1064,17 +1064,21 @@ export function GalleryDetailModal({
 
               {/* Description Section */}
               {hasAccess && (gallery.description || gallery.description_html || currentDescHtml) && !isEditingDescription && (
-                <div className="mb-3 relative group">
-                  {/* Admin Edit Button */}
+                <div className="mb-3">
+                  {/* Admin Edit Button - Always visible for owner */}
                   {session?.is_owner && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingDescription(true)}
-                      className="absolute -top-1 -right-1 p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all opacity-0 group-hover:opacity-100 z-10"
-                      title="แก้ไข Description"
-                    >
-                      <Pencil size={12} />
-                    </button>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-medium">Description</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingDescription(true)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/30 transition-all text-xs"
+                        title="แก้ไข Description"
+                      >
+                        <Pencil size={11} />
+                        <span>แก้ไข</span>
+                      </button>
+                    </div>
                   )}
                   {/* Rich HTML or Plain Text */}
                   {(currentDescHtml || gallery.description_html) ? (
