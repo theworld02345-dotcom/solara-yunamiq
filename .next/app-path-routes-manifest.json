@@ -1,0 +1,10 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/api/auth/callback/route": "/api/auth/callback",
+  "/api/auth/discord/route": "/api/auth/discord",
+  "/api/check-role/route": "/api/check-role",
+  "/check-role/page": "/check-role",
+  "/page": "/"
+}

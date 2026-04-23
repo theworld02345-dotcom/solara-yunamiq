@@ -1,0 +1,10 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/auth/callback/route": "app/api/auth/callback/route.js",
+  "/api/auth/discord/route": "app/api/auth/discord/route.js",
+  "/api/check-role/route": "app/api/check-role/route.js",
+  "/check-role/page": "app/check-role/page.js",
+  "/page": "app/page.js"
+}
