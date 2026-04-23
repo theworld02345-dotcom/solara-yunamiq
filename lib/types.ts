@@ -115,6 +115,8 @@ export interface Gallery {
   id: string
   title: string
   description: string
+  /** Rich text description in HTML format (supports images, formatting, etc.) */
+  description_html: string | null
   /**
    * @deprecated ใช้ images[0].url แทน
    * เก็บไว้เพื่อ backward-compat กับ gallery เก่าที่ยังไม่ migrate

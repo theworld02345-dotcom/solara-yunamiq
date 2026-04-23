@@ -68,6 +68,7 @@ export const UpdateGallerySchema = z
   .object({
     title: ShortText("title").optional(),
     description: LongText("description").optional(),
+    description_html: z.string().max(50000, "description_html ยาวเกิน 50,000 ตัวอักษร").optional().nullable(),
     thumbnail: z.string().trim().optional(),
     images: z.array(z.string().trim()).optional(),
     tags: z.array(z.string().trim().min(1)).max(20).optional(),

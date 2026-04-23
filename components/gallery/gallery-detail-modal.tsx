@@ -6,7 +6,7 @@ import {
   AlertCircle, Lock, Eye, ClipboardList, Users,
   ChevronDown, ChevronUp, Zap, Crown, Share2,
   ChevronLeft, ChevronRight, Images, Maximize2, Minimize2,
-  BookOpen, ArrowLeft, Download, ZoomIn, ZoomOut,
+  BookOpen, ArrowLeft, Download, ZoomIn, ZoomOut, Pencil,
 } from "lucide-react"
 import { toast } from "sonner"
 import type { Gallery, GalleryLink, SessionUser, Tag } from "@/lib/types"
@@ -15,6 +15,8 @@ import { canAccessGallery } from "@/lib/access"
 import { formatUploadDate, timeAgo } from "@/lib/format"
 import { useFavorites } from "@/hooks/use-favorites"
 import { copyLinkAction, openGalleryAction } from "@/app/actions"
+import { actionSaveGalleryDescriptionHtml } from "@/app/admin/actions"
+import { GalleryDescriptionEditor } from "./gallery-description-editor"
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div aria-hidden="true" className={`animate-pulse rounded-md bg-white/8 ${className}`} />
@@ -148,7 +150,7 @@ function LinkRow({ link, galleryId, session, idx }: {
         </button>
       )}
       <button onClick={handleCopy} disabled={busy || !link.is_active || isRoleLocked}
-        aria-label={copied ? "Copied!" : "ค��ดลอกลิงก์"}
+        aria-label={copied ? "Copied!" : "ค���ดลอกลิงก์"}
         className={`shrink-0 p-2 rounded-lg transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed ${
           copied ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-400 hover:text-white hover:bg-white/10"
         }`}>
@@ -377,7 +379,7 @@ function FullscreenViewer({
             <button
               onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.min(4, z + 0.5)) }}
               className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all"
-              aria-label="ซูมเข��า"
+              aria-label="ซูมเ����า"
             >
               <ZoomIn size={15} />
             </button>
@@ -864,6 +866,9 @@ export function GalleryDetailModal({
   const [viewFired, setViewFired] = useState(false)
   const [showInactive, setShowInactive] = useState(false)
   const [readerOpen, setReaderOpen] = useState(false)
+  const [isEditingDescription, setIsEditingDescription] = useState(false)
+  const [isSavingDescription, setIsSavingDescription] = useState(false)
+  const [currentDescHtml, setCurrentDescHtml] = useState<string | null>(null)
 
   const sheetRef = useRef<HTMLDivElement>(null)
   const DRAG_CLOSE_THRESHOLD = 130
@@ -875,7 +880,8 @@ export function GalleryDetailModal({
 
   useEffect(() => {
     setDragOffsetY(0); setViewFired(false); setShowInactive(false); setReaderOpen(false)
-  }, [gallery?.id])
+    setIsEditingDescription(false); setCurrentDescHtml(gallery?.description_html ?? null)
+  }, [gallery?.id, gallery?.description_html])
 
   useEffect(() => {
     if (open && gallery && session && !viewFired) {
@@ -1056,12 +1062,76 @@ export function GalleryDetailModal({
                 )}
               </div>
 
-              {gallery.description && hasAccess && (
-                <p className="text-sm text-zinc-400 leading-relaxed mb-3 whitespace-pre-line">
-                  {gallery.description}
-                </p>
+              {/* Description Section */}
+              {hasAccess && (gallery.description || gallery.description_html || currentDescHtml) && !isEditingDescription && (
+                <div className="mb-3 relative group">
+                  {/* Admin Edit Button */}
+                  {session?.is_owner && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDescription(true)}
+                      className="absolute -top-1 -right-1 p-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all opacity-0 group-hover:opacity-100 z-10"
+                      title="แก้ไข Description"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                  )}
+                  {/* Rich HTML or Plain Text */}
+                  {(currentDescHtml || gallery.description_html) ? (
+                    <div 
+                      className="text-sm text-zinc-400 leading-relaxed gallery-desc-viewer"
+                      dangerouslySetInnerHTML={{ __html: currentDescHtml || gallery.description_html || "" }}
+                    />
+                  ) : (
+                    <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-line">
+                      {gallery.description}
+                    </p>
+                  )}
+                </div>
               )}
-              {gallery.description && !hasAccess && (
+
+              {/* Admin: Add Description Button (when no description exists) */}
+              {hasAccess && !gallery.description && !gallery.description_html && !currentDescHtml && session?.is_owner && !isEditingDescription && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingDescription(true)}
+                  className="mb-3 w-full py-2 px-3 rounded-lg border border-dashed border-white/10 text-zinc-500 hover:border-white/20 hover:text-zinc-400 transition-all flex items-center justify-center gap-2 text-xs"
+                >
+                  <Pencil size={12} />
+                  <span>เพิ่ม Description</span>
+                </button>
+              )}
+
+              {/* Admin: Description Editor */}
+              {hasAccess && session?.is_owner && isEditingDescription && (
+                <div className="mb-3">
+                  <GalleryDescriptionEditor
+                    initialHtml={currentDescHtml || gallery.description_html}
+                    isSaving={isSavingDescription}
+                    onCancel={() => setIsEditingDescription(false)}
+                    onSave={async (html, plainText) => {
+                      setIsSavingDescription(true)
+                      try {
+                        const result = await actionSaveGalleryDescriptionHtml(gallery.id, html, plainText)
+                        if (result.ok) {
+                          setCurrentDescHtml(html)
+                          setIsEditingDescription(false)
+                          toast.success("บันทึก Description แล้ว")
+                        } else {
+                          toast.error(result.error || "บันทึกไม่สำเร็จ")
+                        }
+                      } catch {
+                        toast.error("เกิดข้อผิดพลาด")
+                      } finally {
+                        setIsSavingDescription(false)
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Locked Description for non-access users */}
+              {(gallery.description || gallery.description_html) && !hasAccess && (
                 <div className="mb-3 px-3 py-2 rounded-lg bg-white/4 border border-white/8 flex items-center gap-2">
                   <Lock size={11} className="shrink-0 text-zinc-600" />
                   <p className="text-xs text-zinc-600 italic">ต้องการ Role เพื่อดูรายละเอียด</p>
@@ -1206,6 +1276,26 @@ export function GalleryDetailModal({
           </div>
         </div>
       </div>
+
+      {/* CSS for gallery description viewer */}
+      <style>{`
+        .gallery-desc-viewer h1 { font-size: 1.5em; font-weight: 800; margin: 0.4em 0; }
+        .gallery-desc-viewer h2 { font-size: 1.25em; font-weight: 700; margin: 0.4em 0; }
+        .gallery-desc-viewer h3 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0; }
+        .gallery-desc-viewer h4 { font-size: 1em; font-weight: 600; margin: 0.3em 0; }
+        .gallery-desc-viewer pre { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.85em; white-space: pre-wrap; }
+        .gallery-desc-viewer ul { list-style: disc; padding-left: 1.5em; }
+        .gallery-desc-viewer ol { list-style: decimal; padding-left: 1.5em; }
+        .gallery-desc-viewer a { text-decoration: underline; color: #60a5fa; }
+        .gallery-desc-viewer img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+        .gallery-desc-viewer hr { border: none; border-top: 2px solid rgba(255,255,255,0.15); margin: 1em 0; }
+        .gallery-desc-viewer blockquote { border-left: 3px solid #2563eb; margin: 12px 0; padding: 8px 16px; background: rgba(37,99,235,0.07); border-radius: 0 8px 8px 0; font-style: italic; }
+        .gallery-desc-viewer table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        .gallery-desc-viewer td, .gallery-desc-viewer th { border: 1px solid rgba(255,255,255,0.15); padding: 8px 12px; }
+        .gallery-desc-viewer th { background: rgba(255,255,255,0.05); font-weight: 700; }
+        .gallery-desc-viewer svg { display: inline-block; vertical-align: middle; }
+        .gallery-desc-viewer p { margin: 0.5em 0; }
+      `}</style>
     </>
   )
 }

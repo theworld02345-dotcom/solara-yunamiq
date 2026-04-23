@@ -103,6 +103,7 @@ function rowToGallery(g: Record<string, unknown>, images: GalleryImage[], links:
     id: g.id as string,
     title: g.title as string,
     description: g.description as string,
+    description_html: (g.description_html as string | null) ?? null,
     thumbnail: g.thumbnail as string,
     images,
     tags: (g.tags as string[]) ?? [],
@@ -541,6 +542,7 @@ async function saveGalleryRow(g: Gallery): Promise<void> {
     id: g.id,
     title: g.title,
     description: g.description,
+    description_html: g.description_html ?? null,
     thumbnail: g.thumbnail,
     tags: g.tags,
     uploaded_by: g.uploaded_by,
@@ -769,6 +771,7 @@ export async function updateGallery(
 
   if (input.title !== undefined) gallery.title = input.title
   if (input.description !== undefined) gallery.description = input.description
+  if (input.description_html !== undefined) gallery.description_html = input.description_html
   if (input.thumbnail !== undefined) gallery.thumbnail = input.thumbnail
   if (input.tags !== undefined) gallery.tags = input.tags
   if (input.is_active !== undefined) gallery.is_active = input.is_active

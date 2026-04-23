@@ -637,6 +637,33 @@ export async function actionAddUserManually(input: {
   return { ok: true, data: newUser }
 }
 
+// ─── GALLERY DESCRIPTION HTML ─────────────────────────────────────────────
+
+/**
+ * บันทึก description_html ของ gallery (rich text editor)
+ * ใช้แทน description ปกติ แต่ยังเก็บ plain text description ไว้ด้วยสำหรับ fallback
+ */
+export async function actionSaveGalleryDescriptionHtml(
+  galleryId: string,
+  descriptionHtml: string,
+  descriptionPlain: string
+): Promise<ActionResult<Gallery>> {
+  const auth = await requireOwner()
+  if (!auth.ok) return auth
+
+  const gallery = await updateGallery(galleryId, {
+    description: descriptionPlain,
+    description_html: descriptionHtml,
+  }, auth.userId)
+
+  if (!gallery) return { ok: false, error: "ไม่พบ gallery หรืออัปเดตล้มเหลว" }
+
+  revalidatePath("/")
+  revalidatePath(`/gallery/${galleryId}`)
+  revalidatePath("/admin/galleries")
+  return { ok: true, data: gallery }
+}
+
 // ─── Backward-compat aliases ───────────────────────────────────────────────
 
 export const adminBanUser = actionBanUser
