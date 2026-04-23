@@ -25,6 +25,7 @@ import type {
   UpdateLinkInput,
 } from "@/lib/validate"
 import GalleryUrlManager from "@/components/ui/GalleryUrlManager"
+import { GalleryDescriptionEditor } from "@/components/gallery/gallery-description-editor"
 import {
   actionCreateGallery,
   actionUpdateGallery,
@@ -182,6 +183,8 @@ function GalleryForm({
 }) {
   const [title, setTitle] = useState(initial?.title ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
+  const [descriptionHtml, setDescriptionHtml] = useState<string | null>(initial?.description_html ?? null)
+  const [isEditingDescription, setIsEditingDescription] = useState(false)
   // ✅ FIX: ใช้ string[] ของ URL (GalleryUrlManager จัดการ GalleryImage[] ภายใน)
   const _initUrls = (initial?.images ?? [])
     .slice()
@@ -221,6 +224,7 @@ function GalleryForm({
       onSubmit({
         title,
         description,
+        description_html: descriptionHtml,
         images,
         tags: selectedTags,
         minLevel,
@@ -259,16 +263,66 @@ function GalleryForm({
         />
       </div>
 
-      {/* Description */}
+      {/* Description - Rich Text Editor */}
       <div>
-        <label className={labelCls}>Description</label>
-        <textarea
-          className={inputCls + " min-h-[80px] resize-y"}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Optional description..."
-        />
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">Description</label>
+          {!isEditingDescription && (
+            <button
+              type="button"
+              onClick={() => setIsEditingDescription(true)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/30 transition-all text-xs"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+              <span>{descriptionHtml ? "แก้ไข Rich Text" : "เปิด Rich Text Editor"}</span>
+            </button>
+          )}
+        </div>
+        
+        {isEditingDescription ? (
+          <div className="border border-zinc-700 rounded-lg overflow-hidden">
+            <GalleryDescriptionEditor
+              initialHtml={descriptionHtml}
+              isSaving={isPending}
+              onCancel={() => setIsEditingDescription(false)}
+              onSave={(html, plainText) => {
+                setDescriptionHtml(html)
+                setDescription(plainText)
+                setIsEditingDescription(false)
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Preview rich HTML if exists */}
+            {descriptionHtml && (
+              <div 
+                className="mb-2 p-3 rounded-lg bg-zinc-800/50 border border-zinc-700 text-sm text-zinc-300 gallery-desc-preview max-h-40 overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+              />
+            )}
+            {/* Plain text fallback input */}
+            <textarea
+              className={inputCls + " min-h-[80px] resize-y"}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Plain text description (หรือกดปุ่มด้านบนเพื่อใช้ Rich Text Editor)..."
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              {descriptionHtml ? "มี Rich Text แล้ว - plain text นี้ใช้เป็น fallback" : "หรือกดปุ่มด้านบนเพื่อเพิ่มรูปภาพและ formatting"}
+            </p>
+          </>
+        )}
       </div>
+      
+      {/* CSS for preview */}
+      <style>{`
+        .gallery-desc-preview img { max-width: 100%; max-height: 100px; border-radius: 6px; }
+        .gallery-desc-preview h1, .gallery-desc-preview h2, .gallery-desc-preview h3 { font-weight: 700; margin: 0.3em 0; }
+        .gallery-desc-preview ul { list-style: disc; padding-left: 1.2em; }
+        .gallery-desc-preview ol { list-style: decimal; padding-left: 1.2em; }
+        .gallery-desc-preview a { color: #60a5fa; text-decoration: underline; }
+      `}</style>
 
       {/* Thumbnail / Images — GalleryUrlManager จัดการทั้งหมด */}
       <div>
